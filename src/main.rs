@@ -1,3 +1,8 @@
+use hashbrown::HashMap;
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
+use tokio;
+
 use algotrader::types::{
     Ccy::*,
     TradingPair,
@@ -6,23 +11,23 @@ use algotrader::types::{
     // sell
 };
 
+const API_KEY: &str = include_str!("../resources/api_key.txt");
+const TRADE_AMOUNT: Decimal = dec!(100.0);
 
-// tokio main
-fn main() {
-    println!("Hello, world!");
-
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
     // starting point (bootstrap): if can buy and can sell == 0 -> buy
 
     for _ in tick(1sec) {
         let (market_data, virtual_wallets, virtual_books) = (MarketData::fetch().await?, VirtualWallet::fetch().await?, VirtualBook::fetch().await?);
         for pair in pairs { // pair = (buy_token, sell_token)
-            if (virtual_wallets[buy_token].amount >= TRADE_SIZE && virtual_books[pair].last_buy_time - now > 1_hour) && market_data[pair].should_buy() {
-                buy(pair, TRADE_SIZE, ACCOUNT_KEY) // send http request without reading response ? or maybe handle response elswhere in async. logs ? wrapper around bitpanda mod or direct use ?
+            if (virtual_wallets[buy_token].amount >= TRADE_AMOUNT && virtual_books[pair].last_buy_time - now > 1_hour) && market_data[pair].should_buy() {
+                buy(pair, TRADE_AMOUNT, API_KEY) // send http request without reading response ? or maybe handle response elswhere in async. logs ? wrapper around bitpanda mod or direct use ?
             }
             //if virtual_books[pair].can_sell > 0 && virtual_wallets[sell_token].amount > 0 && market_data[pair].should_sell() { // should sell depends on trade too
             for trade in trade_history.get_buys_not_sold() { // instead of iterating on all trades, iterate on trades sorted by buying price and break as soon as one is not sold
                 if should_sell(trade, market_data) {
-                    sell(pair, virtual_books[pair].amount / virtual_books[pair].can_sell, ACCOUNT_KEY)
+                    sell(pair, virtual_books[pair].amount / virtual_books[pair].can_sell, API_KEY)
                 }
             }
         }
@@ -30,6 +35,9 @@ fn main() {
 }
 
 struct MarketData {
+    ask: f64,
+    bid: f64,
+    avg: f64,
     // data (ccy -> bid, ask, avg)
     // algotrader’s virtual wallet {mapping ccy -> amount, no of trades to buy, no to sell}, make it in a separate struct ?
     // hm ccy -> Data {market_data: MarketData, wallet: Wallet}, no, 2 separate hashmaps is better
@@ -41,8 +49,8 @@ struct VirtualWallet {
 }
 
 struct VirtualBook { // trade history ?
-    can_buy: uint, // can be derived from trades ?
-    can_sell: uint,
+    can_buy: u8, // can be derived from trades ?
+    can_sell: u8,
     trades: Vec<Trade> // put trades in pair buy sell, or buy not_yet_sold
 }  
 
