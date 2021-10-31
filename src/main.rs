@@ -1,9 +1,9 @@
-use algotrader::bitpanda::{
+use algotrader::types::{
     Ccy::*,
     TradingPair,
     trading_pairs::*,
-    buy,
-    sell
+    // buy,
+    // sell
 };
 
 
